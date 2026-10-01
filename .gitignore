@@ -1,0 +1,28 @@
+# Environment variables and secrets - never commit these
+.env
+.env.*
+!.env.example
+!.env.template
+*_token.json
+token.json
+credentials.json
+client_secret*.json
+*.pem
+*.key
+.vault_data/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+env/
+
+# Tooling, caches, build output
+.cache/
+node_modules/
+dist/
+build/
+.vscode/
+.idea/

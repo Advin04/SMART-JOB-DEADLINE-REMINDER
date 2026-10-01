@@ -1,0 +1,210 @@
+import { motion } from 'framer-motion'
+import { Calendar, Clock, Mail, AlertTriangle, CheckCircle, Star, Trash2 } from 'lucide-react'
+import moment from 'moment'
+import toast from 'react-hot-toast'
+
+const UpcomingDeadlines = ({ events, onDeleteEvent }) => {
+  const now = new Date()
+  const upcomingEvents = events
+    .filter(event => new Date(event.start) > now)
+    .sort((a, b) => new Date(a.start) - new Date(b.start))
+    .slice(0, 6) // Show top 6 upcoming events
+  
+  // Debug: log event structure
+  if (upcomingEvents.length > 0) {
+    console.log('Sample event data:', upcomingEvents[0])
+  }
+
+  const getUrgencyColor = (urgency) => {
+    const colors = {
+      high: 'text-red-400 bg-red-500/10 border-red-500/30',
+      medium: 'text-yellow-400 bg-yellow-500/10 border-yellow-500/30',
+      low: 'text-green-400 bg-green-500/10 border-green-500/30',
+      custom: 'text-primary-400 bg-primary-500/10 border-primary-500/30'
+    }
+    return colors[urgency] || colors.medium
+  }
+
+  const getUrgencyIcon = (urgency) => {
+    const icons = {
+      high: <AlertTriangle className="w-4 h-4" />,
+      medium: <Clock className="w-4 h-4" />,
+      low: <CheckCircle className="w-4 h-4" />,
+      custom: <Star className="w-4 h-4" />
+    }
+    return icons[urgency] || icons.medium
+  }
+
+  const getTimeUntil = (date) => {
+    const eventDate = moment(date)
+    const now = moment()
+    const duration = moment.duration(eventDate.diff(now))
+    
+    const years = Math.floor(duration.asYears())
+    const months = Math.floor(duration.asMonths())
+    const days = Math.floor(duration.asDays())
+    const hours = Math.floor(duration.asHours())
+    const minutes = Math.floor(duration.asMinutes())
+    
+    // More human-readable time formatting
+    if (years >= 1) {
+      const remainingMonths = months % 12
+      if (remainingMonths > 0) {
+        return `${years} yr${years !== 1 ? 's' : ''}, ${remainingMonths} mo${remainingMonths !== 1 ? 's' : ''}`
+      }
+      return `${years} year${years !== 1 ? 's' : ''}`
+    } else if (months >= 1) {
+      const remainingDays = days - (months * 30)
+      if (remainingDays > 7) {
+        return `${months} mo${months !== 1 ? 's' : ''}, ${Math.floor(remainingDays / 7)} wk${Math.floor(remainingDays / 7) !== 1 ? 's' : ''}`
+      }
+      return `${months} month${months !== 1 ? 's' : ''}`
+    } else if (days >= 7) {
+      const weeks = Math.floor(days / 7)
+      const remainingDays = days % 7
+      if (remainingDays > 0) {
+        return `${weeks} wk${weeks !== 1 ? 's' : ''}, ${remainingDays} day${remainingDays !== 1 ? 's' : ''}`
+      }
+      return `${weeks} week${weeks !== 1 ? 's' : ''}`
+    } else if (days >= 1) {
+      return `${days} day${days !== 1 ? 's' : ''}`
+    } else if (hours >= 1) {
+      return `${hours} hour${hours !== 1 ? 's' : ''}`
+    } else {
+      return `${minutes} minute${minutes !== 1 ? 's' : ''}`
+    }
+  }
+
+  if (upcomingEvents.length === 0) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="glass-card p-8 rounded-xl text-center"
+      >
+        <Calendar className="w-16 h-16 text-text-muted mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-text-primary mb-2">
+          No Upcoming Deadlines
+        </h3>
+        <p className="text-text-secondary">
+          Great! You're all caught up. Use the email scanner to find new opportunities.
+        </p>
+      </motion.div>
+    )
+  }
+
+  return (
+    <motion.div
+      id="upcoming-deadlines"
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: 0.1 }}
+      className="glass-card p-6 rounded-xl"
+    >
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-xl font-bold text-text-primary">Upcoming Deadlines</h2>
+        <span className="text-sm text-text-secondary">
+          {upcomingEvents.length} upcoming
+        </span>
+      </div>
+
+      <div className="space-y-4">
+        {upcomingEvents.map((event, index) => (
+          <motion.div
+            key={event.id}
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.4, delay: index * 0.1 }}
+            whileHover={{ scale: 1.02, x: 5, transition: { duration: 0.2 } }}
+            className="bg-dark-300/30 border border-primary-500/20 rounded-lg p-4 hover:border-primary-500/40 transition-all duration-300"
+          >
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <div className="flex items-center space-x-3 mb-2">
+                  <div className={`flex items-center space-x-1 px-2 py-1 rounded-full text-xs border ${getUrgencyColor(event.extendedProperties?.shared?.urgency || event.resource?.urgency)}`}>
+                    {getUrgencyIcon(event.extendedProperties?.shared?.urgency || event.resource?.urgency)}
+                    <span className="capitalize">{event.extendedProperties?.shared?.urgency || event.resource?.urgency || 'medium'}</span>
+                  </div>
+                  
+                  <span className={`px-2 py-1 rounded-full text-xs ${
+                    (event.extendedProperties?.shared?.type || event.resource?.type) === 'application' ? 'bg-blue-500/20 text-blue-400' :
+                    (event.extendedProperties?.shared?.type || event.resource?.type) === 'interview' ? 'bg-purple-500/20 text-purple-400' :
+                    (event.extendedProperties?.shared?.type || event.resource?.type) === 'assessment' ? 'bg-orange-500/20 text-orange-400' :
+                    'bg-primary-500/20 text-primary-400'
+                  }`}>
+                    {event.extendedProperties?.shared?.type || event.resource?.type || 'reminder'}
+                  </span>
+                </div>
+                
+                <h3 className="font-semibold text-text-primary mb-1 line-clamp-2">
+                  {event.title}
+                </h3>
+                
+                {(() => {
+                  // Try multiple sources for sender email
+                  let senderEmail = event.extendedProperties?.shared?.senderEmail ||
+                                   event.resource?.originalEmail?.from ||
+                                   event.resource?.originalEmail?.sender;
+                  
+                  // Extract from description if not found (format: "From: email@example.com")
+                  if (!senderEmail && event.description) {
+                    const fromMatch = event.description.match(/From:\s*([^\n<]+)/i);
+                    if (fromMatch) {
+                      senderEmail = fromMatch[1].trim();
+                    }
+                  }
+                  
+                  return senderEmail ? (
+                    <div className="flex items-center space-x-1 text-xs text-text-secondary mb-2">
+                      <Mail className="w-3 h-3 flex-shrink-0" />
+                      <span className="truncate" title={senderEmail}>
+                        {senderEmail}
+                      </span>
+                    </div>
+                  ) : null;
+                })()}
+                
+                <div className="flex items-center space-x-4 text-sm">
+                  <div className="flex items-center space-x-1 text-text-secondary">
+                    <Calendar className="w-4 h-4" />
+                    <span>{moment(event.start).format('MMM DD, YYYY')}</span>
+                  </div>
+                  <div className="flex items-center space-x-1 text-text-secondary">
+                    <Clock className="w-4 h-4" />
+                    <span>{moment(event.start).format('h:mm A')}</span>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex flex-col items-end ml-4 space-y-2">
+                <div className="text-sm font-medium text-primary-400">
+                  in {getTimeUntil(event.start)}
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  transition={{ duration: 0.15 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => onDeleteEvent(event.id, event.title)}
+                  className="p-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 transition-colors group"
+                  title="Delete reminder"
+                >
+                  <Trash2 className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                </motion.button>
+              </div>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+      
+      {events.filter(e => new Date(e.start) > now).length > 6 && (
+        <div className="text-center mt-4">
+          <span className="text-sm text-text-secondary">
+            +{events.filter(e => new Date(e.start) > now).length - 6} more deadlines in calendar
+          </span>
+        </div>
+      )}
+    </motion.div>
+  )
+}
+
+export default UpcomingDeadlines
