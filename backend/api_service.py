@@ -230,7 +230,7 @@ def _new_system(credentials):
 
 # Everything except these needs a valid signed-in user token. The cron endpoint has its own
 # shared-secret check. One gate here means a new route can't be left open by accident.
-PUBLIC_PATHS = {'/health', '/auth/google', '/auth/google/callback', '/api/cron/scan'}
+PUBLIC_PATHS = {'/', '/health', '/auth/google', '/auth/google/callback', '/api/cron/scan'}
 
 
 @app.before_request
@@ -357,11 +357,13 @@ def auth_me():
     return jsonify({"success": True, "user": {k: user.get(k) for k in ('email', 'name', 'picture', 'sub')}})
 
 
+@app.route('/', methods=['GET'])
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint"""
     return jsonify({
         "status": "healthy",
+        "service": "Smart Job Deadline Reminder API",
         "timestamp": datetime.now().isoformat(),
         "system_ready": True
     })
